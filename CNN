@@ -1,0 +1,88 @@
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras import datasets, layers, models
+from sklearn.metrics import classification_report
+
+# Load and preprocess the dataset (example using CIFAR-10)
+(train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
+train_images, test_images = train_images / 255.0, test_images / 255.0
+
+# Display some sample images from the dataset
+class_names = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+
+def plot_sample_images(images, labels, class_names):
+    plt.figure(figsize=(10, 10))
+    for i in range(25):
+        plt.subplot(5, 5, i + 1)
+        plt.xticks([])
+        plt.yticks([])
+        plt.grid(False)
+        plt.imshow(images[i], cmap=plt.cm.binary)
+        plt.xlabel(class_names[labels[i][0]])
+    plt.show()
+
+plot_sample_images(train_images, train_labels, class_names)
+
+# Define the CNN model
+def create_cnn_model(input_shape, num_classes):
+    model = models.Sequential()
+
+    # Convolutional layers
+    model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
+    model.add(layers.MaxPooling2D((2, 2)))
+    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+    model.add(layers.MaxPooling2D((2, 2)))
+    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+
+    # Dense layers
+    model.add(layers.Flatten())
+    model.add(layers.Dense(64, activation='relu'))
+    model.add(layers.Dense(num_classes, activation='softmax'))
+
+    return model
+
+# Specify input shape and number of classes
+input_shape = train_images.shape[1:]
+num_classes = 10  # CIFAR-10 has 10 classes
+
+# Create the model
+model = create_cnn_model(input_shape, num_classes)
+
+# Compile the model
+model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+# Train the model
+history = model.fit(train_images, train_labels, epochs=10,
+                    validation_data=(test_images, test_labels))
+
+# Plot training & validation accuracy values
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Val Accuracy')
+plt.title('Model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(loc='upper left')
+
+# Plot training & validation loss values
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Val Loss')
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(loc='upper left')
+
+plt.show()
+
+# Evaluate the model
+test_loss, test_acc = model.evaluate(test_images, test_labels, verbose=2)
+print(f'\nTest accuracy: {test_acc}')
+
+# Generate a classification report
+predictions = model.predict(test_images)
+predicted_labels = tf.argmax(predictions, axis=1).numpy()
+print(classification_report(test_labels, predicted_labels, target_names=class_names))
